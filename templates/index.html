@@ -27,16 +27,54 @@
             border-bottom: 1px solid #3e3e42;
         }
 
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
         .header h1 {
             font-size: 24px;
-            margin-bottom: 4px;
             cursor: pointer;
-            display: block;
+            display: inline-block;
             transition: color 0.2s;
+            margin: 0;
         }
 
         .header h1:hover {
             color: #007acc;
+        }
+
+        .file-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .file-selector label {
+            font-size: 12px;
+            color: #858585;
+        }
+
+        .file-selector select {
+            background-color: #3c3c3c;
+            color: #d4d4d4;
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .file-selector select:hover {
+            border-color: #007acc;
+        }
+
+        .file-selector select:focus {
+            border-color: #007acc;
         }
 
         .no-memory-button {
@@ -56,6 +94,114 @@
 
         .no-memory-button:hover {
             color: #007acc;
+        }
+
+        .metadata-link {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 0;
+            background-color: transparent;
+            border: none;
+            color: #858585;
+            cursor: pointer;
+            font-size: 11px;
+            transition: color 0.2s;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            position: relative;
+        }
+
+        .metadata-link:hover {
+            color: #007acc;
+        }
+
+        .metadata-tooltip {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 4px;
+            background-color: #252526;
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 11px;
+            color: #d4d4d4;
+            white-space: nowrap;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .metadata-link:hover .metadata-tooltip {
+            display: block;
+        }
+
+        .metadata-view {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: none;
+        }
+
+        .metadata-view.active {
+            display: block;
+        }
+
+        .metadata-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: #252526;
+            border: 1px solid #3e3e42;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .metadata-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #3e3e42;
+        }
+
+        .metadata-header h2 {
+            font-size: 20px;
+            color: #d4d4d4;
+            margin: 0;
+        }
+
+        .back-button {
+            background-color: #3c3c3c;
+            color: #d4d4d4;
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            padding: 6px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .back-button:hover {
+            background-color: #007acc;
+            border-color: #007acc;
+        }
+
+        .metadata-json {
+            background-color: #1e1e1e;
+            border-radius: 4px;
+            padding: 16px;
+            overflow-x: auto;
+        }
+
+        .metadata-json pre {
+            margin: 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            color: #d4d4d4;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
         }
 
         .controls {
@@ -516,10 +662,27 @@
 </head>
 <body>
     <div class="header">
-        <h1 onclick="goHome()">Memories Hub</h1>
-        <button class="no-memory-button" id="noMemoryButton" onclick="showNoMemoryModal()">
-            View conversations without memories
-        </button>
+        <div class="header-top">
+            <div>
+                <h1 onclick="goHome()">Memories Hub</h1>
+                <button class="no-memory-button" id="noMemoryButton" onclick="showNoMemoryModal()">
+                    View conversations without memories
+                </button>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                <div class="file-selector">
+                    <select id="fileSelect" onchange="loadSelectedFile()">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                {% if has_metadata %}
+                <a class="metadata-link" onclick="showMetadataView(event)" style="margin-left: 0;">
+                    Read dataset metadata
+                    <span class="metadata-tooltip" id="metadataTooltip">Loading...</span>
+                </a>
+                {% endif %}
+            </div>
+        </div>
         <div class="controls">
             <input
                 type="range"
@@ -559,6 +722,18 @@
         <button class="nav-button" id="nextButton" title="Next">›</button>
     </div>
 
+    <div class="metadata-view" id="metadataView">
+        <div class="metadata-container">
+            <div class="metadata-header">
+                <h2>Dataset Metadata</h2>
+                <button class="back-button" onclick="goHome()">← Back to Hub</button>
+            </div>
+            <div class="metadata-json" id="metadataJson">
+                <div class="loading">Loading...</div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const slider = document.getElementById('conversationSlider');
         const indexDisplay = document.getElementById('indexDisplay');
@@ -567,12 +742,15 @@
         const nextButton = document.getElementById('nextButton');
         const homeView = document.getElementById('homeView');
         const conversationView = document.getElementById('conversationView');
+        const metadataView = document.getElementById('metadataView');
         const memoryGrid = document.getElementById('memoryGrid');
         const totalConversations = {{ total_conversations }};
 
         let currentIndex = 0;
         let allConversations = [];
         let noMemoryConversations = [];
+        let availableFiles = [];
+        let currentMetadata = null;
 
         function updateButtonStates() {
             prevButton.disabled = currentIndex === 0;
@@ -756,6 +934,7 @@
         function showHomeView() {
             homeView.classList.add('active');
             conversationView.classList.remove('active');
+            metadataView.classList.remove('active');
             slider.style.display = 'none';
             indexDisplay.style.display = 'none';
         }
@@ -763,8 +942,17 @@
         function showConversationView() {
             homeView.classList.remove('active');
             conversationView.classList.add('active');
+            metadataView.classList.remove('active');
             slider.style.display = 'block';
             indexDisplay.style.display = 'block';
+        }
+
+        function showMetadataViewPage() {
+            homeView.classList.remove('active');
+            conversationView.classList.remove('active');
+            metadataView.classList.add('active');
+            slider.style.display = 'none';
+            indexDisplay.style.display = 'none';
         }
 
         async function renderHomeView() {
@@ -870,6 +1058,93 @@
             return null;
         }
 
+        async function loadMetadata() {
+            try {
+                const response = await fetch('/api/metadata');
+                if (response.ok) {
+                    currentMetadata = await response.json();
+
+                    // Update tooltip with short info
+                    const tooltip = document.getElementById('metadataTooltip');
+                    if (tooltip && currentMetadata) {
+                        const model = currentMetadata.model || 'N/A';
+                        const timestamp = currentMetadata.processing_timestamp
+                            ? new Date(currentMetadata.processing_timestamp).toLocaleDateString('es-ES')
+                            : 'N/A';
+                        tooltip.textContent = `Model: ${model} | Processed: ${timestamp}`;
+                    }
+                } else {
+                    currentMetadata = null;
+                }
+            } catch (error) {
+                console.error('Error loading metadata:', error);
+                currentMetadata = null;
+            }
+        }
+
+        async function loadAvailableFiles() {
+            try {
+                const response = await fetch('/api/files');
+                const data = await response.json();
+                availableFiles = data.files;
+                const currentFile = data.current;
+
+                const select = document.getElementById('fileSelect');
+                select.innerHTML = availableFiles.map(file => `
+                    <option value="${file.path}" ${file.path === currentFile ? 'selected' : ''}>
+                        ${file.name}
+                    </option>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading files:', error);
+            }
+        }
+
+        function showMetadataView(event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            // Navigate to metadata view
+            window.location.hash = 'metadata';
+            showMetadataViewPage();
+
+            // Render metadata
+            const container = document.getElementById('metadataJson');
+            if (currentMetadata) {
+                container.innerHTML = `<pre>${JSON.stringify(currentMetadata, null, 2)}</pre>`;
+            } else {
+                container.innerHTML = '<div class="loading">No metadata available</div>';
+            }
+        }
+
+        async function loadSelectedFile() {
+            const select = document.getElementById('fileSelect');
+            const selectedPath = select.value;
+
+            if (!selectedPath) return;
+
+            try {
+                const response = await fetch('/api/load-file', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ file_path: selectedPath })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Reload the page to refresh with new data
+                    window.location.reload();
+                } else {
+                    alert('Error loading file: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error loading file: ' + error.message);
+            }
+        }
+
         // Load conversation when slider changes
         slider.addEventListener('input', (e) => {
             loadConversation(parseInt(e.target.value));
@@ -906,24 +1181,57 @@
 
         // Handle hash changes
         window.addEventListener('hashchange', () => {
-            const index = getInitialIndex();
-            if (index !== null) {
-                showConversationView();
-                loadConversation(index);
+            const hash = window.location.hash;
+
+            if (hash === '#metadata') {
+                showMetadataViewPage();
+                const container = document.getElementById('metadataJson');
+                if (currentMetadata) {
+                    container.innerHTML = `<pre>${JSON.stringify(currentMetadata, null, 2)}</pre>`;
+                } else {
+                    container.innerHTML = '<div class="loading">No metadata available</div>';
+                }
             } else {
-                showHomeView();
-                renderHomeView();
+                const index = getInitialIndex();
+                if (index !== null) {
+                    showConversationView();
+                    loadConversation(index);
+                } else {
+                    showHomeView();
+                    renderHomeView();
+                }
             }
         });
 
         // Initial load
-        const initialIndex = getInitialIndex();
-        if (initialIndex !== null) {
-            showConversationView();
-            loadConversation(initialIndex);
+        loadAvailableFiles();
+        loadMetadata();
+
+        const hash = window.location.hash;
+        if (hash === '#metadata') {
+            showMetadataViewPage();
+            const container = document.getElementById('metadataJson');
+            if (currentMetadata) {
+                container.innerHTML = `<pre>${JSON.stringify(currentMetadata, null, 2)}</pre>`;
+            } else {
+                // Wait for metadata to load
+                setTimeout(() => {
+                    if (currentMetadata) {
+                        container.innerHTML = `<pre>${JSON.stringify(currentMetadata, null, 2)}</pre>`;
+                    } else {
+                        container.innerHTML = '<div class="loading">No metadata available</div>';
+                    }
+                }, 500);
+            }
         } else {
-            showHomeView();
-            renderHomeView();
+            const initialIndex = getInitialIndex();
+            if (initialIndex !== null) {
+                showConversationView();
+                loadConversation(initialIndex);
+            } else {
+                showHomeView();
+                renderHomeView();
+            }
         }
     </script>
 </body>
