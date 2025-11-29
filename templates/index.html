@@ -29,9 +29,9 @@
 
         .header h1 {
             font-size: 24px;
-            margin-bottom: 10px;
+            margin-bottom: 4px;
             cursor: pointer;
-            display: inline-block;
+            display: block;
             transition: color 0.2s;
         }
 
@@ -40,7 +40,8 @@
         }
 
         .no-memory-button {
-            margin-top: 8px;
+            display: block;
+            margin-bottom: 12px;
             padding: 0;
             background-color: transparent;
             border: none;
@@ -50,6 +51,7 @@
             transition: color 0.2s;
             text-decoration: underline;
             text-underline-offset: 2px;
+            text-align: left;
         }
 
         .no-memory-button:hover {
@@ -623,13 +625,30 @@
 
             // Render memories if available
             let memoriesHTML = '';
-            if (data.memories && data.memories.trim() && data.memories !== 'None') {
-                memoriesHTML = `
-                    <div class="memories">
-                        <h3>Memories</h3>
-                        <div class="memories-content">${parseMarkdown(data.memories)}</div>
-                    </div>
-                `;
+            if (data.memories && data.memories.trim()) {
+                // Check if memories is essentially just "None"
+                const memories = data.memories.trim();
+                const cleanedMemories = memories
+                    .replace(/^[•\-*\s]+/, '')
+                    .replace(/[.\s]+$/, '')
+                    .trim();
+
+                const isJustNone = cleanedMemories === '' || cleanedMemories.toLowerCase() === 'none';
+
+                if (isJustNone) {
+                    memoriesHTML = `
+                        <div class="memories">
+                            <div class="memories-content" style="font-style: italic; color: #707070;">No memories</div>
+                        </div>
+                    `;
+                } else {
+                    memoriesHTML = `
+                        <div class="memories">
+                            <h3>Memories</h3>
+                            <div class="memories-content">${parseMarkdown(data.memories)}</div>
+                        </div>
+                    `;
+                }
             }
 
             // Render chat messages
@@ -763,11 +782,19 @@
 
                 allConversations.forEach((conv, index) => {
                     const memories = conv.memories ? conv.memories.trim() : '';
-                    const hasMemory = memories &&
-                                    memories !== 'None' &&
-                                    memories !== '- None' &&
-                                    !memories.match(/^-?\s*None\s*$/i);
-                    if (hasMemory) {
+
+                    // Check if memories is essentially just "None" in various formats
+                    // Remove bullets (•, -, *), spaces, and periods
+                    const cleanedMemories = memories
+                        .replace(/^[•\-*\s]+/, '')  // Remove leading bullets and spaces
+                        .replace(/[.\s]+$/, '')      // Remove trailing periods and spaces
+                        .trim();
+
+                    const isJustNone = !memories ||
+                                     cleanedMemories === '' ||
+                                     cleanedMemories.toLowerCase() === 'none';
+
+                    if (!isJustNone) {
                         withMemories.push({ ...conv, index });
                     } else {
                         noMemoryConversations.push({ ...conv, index });
