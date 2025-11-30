@@ -67,16 +67,41 @@ def extract_linear_conversation(conversation_data: Dict[str, Any]) -> List[Dict[
                 if timestamp:
                     readable_time = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
+                metadata = message_data.get('metadata', {})
+
                 clean_msg = {
                     "role": message_data['author']['role'],
                     "text": text_content,
                     "timestamp": readable_time,
-                    "model_slug": message_data.get('metadata', {}).get('model_slug')
+                    "model_slug": metadata.get('model_slug')
                 }
 
                 # Add images field if there are any
                 if images:
                     clean_msg["images"] = images
+
+                # Add additional metadata fields if present
+                if 'finish_details' in metadata:
+                    finish_details = metadata['finish_details']
+                    if 'type' in finish_details:
+                        clean_msg["finish_reason"] = finish_details['type']
+
+                if 'weight' in metadata:
+                    clean_msg["weight"] = metadata['weight']
+
+                if 'end_turn' in metadata:
+                    clean_msg["end_turn"] = metadata['end_turn']
+
+                if 'recipient' in metadata:
+                    clean_msg["recipient"] = metadata['recipient']
+
+                # Citations (from web browsing)
+                if 'citations' in metadata:
+                    clean_msg["citations"] = metadata['citations']
+
+                # Command/tool invocations
+                if 'command' in metadata:
+                    clean_msg["command"] = metadata['command']
 
                 messages.append(clean_msg)
 
@@ -85,36 +110,6 @@ def extract_linear_conversation(conversation_data: Dict[str, Any]) -> List[Dict[
 
     # The loop extracted them in reverse (Newest -> Oldest), so flip it back
     return messages[::-1]
-
-
-def filter_conversations(
-    all_conversations: List[Dict[str, Any]],
-    keyword: Optional[str] = None,
-    min_turns: int = 0
-) -> List[Dict[str, Any]]:
-    """Filters conversations by keyword or length, returns list of cleaned linear objects."""
-    cleaned_data = []
-
-    for conv in all_conversations:
-        title = conv.get('title', 'Untitled')
-
-        # Basic filtering logic
-        if keyword and keyword.lower() not in title.lower():
-            continue
-
-        linear_chat = extract_linear_conversation(conv)
-
-        # Filter out short "hello/goodbye" chats
-        if len(linear_chat) < min_turns:
-            continue
-
-        cleaned_data.append({
-            "id": conv.get('id'),
-            "title": title,
-            "messages": linear_chat
-        })
-
-    return cleaned_data
 
 
 def flatten_turn(turn: Dict[str, str], agent_mode: str = 'summarised_conversation') -> str:

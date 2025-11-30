@@ -5,7 +5,6 @@ import pytest
 from chatgpt_parser.conversation import (
     load_conversations,
     extract_linear_conversation,
-    filter_conversations,
     flatten_turn
 )
 
@@ -71,79 +70,6 @@ def test_extract_linear_conversation():
     assert messages[1]["role"] == "assistant"
     assert messages[1]["text"] == "Hi there!"
     assert messages[1]["model_slug"] == "gpt-4"
-
-
-def test_filter_conversations_by_keyword():
-    """Test filtering conversations by keyword in title."""
-    test_convs = [
-        {"id": "1", "title": "Python coding help", "mapping": {}, "current_node": None},
-        {"id": "2", "title": "Recipe for pasta", "mapping": {}, "current_node": None},
-        {"id": "3", "title": "Python debugging", "mapping": {}, "current_node": None}
-    ]
-
-    filtered = filter_conversations(test_convs, keyword="python")
-
-    assert len(filtered) == 2
-    assert all("python" in conv["title"].lower() for conv in filtered)
-
-
-def test_filter_conversations_by_min_turns():
-    """Test filtering conversations by minimum turns."""
-    test_convs = [
-        {
-            "id": "1",
-            "title": "Short chat",
-            "mapping": {
-                "root": {"message": None, "parent": None},
-                "msg1": {
-                    "message": {
-                        "content": {"parts": ["Hi"]},
-                        "author": {"role": "user"},
-                        "create_time": 1234567890
-                    },
-                    "parent": "root"
-                }
-            },
-            "current_node": "msg1"
-        },
-        {
-            "id": "2",
-            "title": "Long chat",
-            "mapping": {
-                "root": {"message": None, "parent": None},
-                "msg1": {
-                    "message": {
-                        "content": {"parts": ["Hello"]},
-                        "author": {"role": "user"},
-                        "create_time": 1234567890
-                    },
-                    "parent": "root"
-                },
-                "msg2": {
-                    "message": {
-                        "content": {"parts": ["Hi!"]},
-                        "author": {"role": "assistant"},
-                        "create_time": 1234567891
-                    },
-                    "parent": "msg1"
-                },
-                "msg3": {
-                    "message": {
-                        "content": {"parts": ["How are you?"]},
-                        "author": {"role": "user"},
-                        "create_time": 1234567892
-                    },
-                    "parent": "msg2"
-                }
-            },
-            "current_node": "msg3"
-        }
-    ]
-
-    filtered = filter_conversations(test_convs, min_turns=2)
-
-    assert len(filtered) == 1
-    assert filtered[0]["id"] == "2"
 
 
 def test_flatten_turn_user():
