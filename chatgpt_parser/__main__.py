@@ -136,3 +136,7 @@ def main() -> None:
     save_conversations(processed_conversations, output_file, metadata)
 
     print("\nDone!")
+
+
+if __name__ == "__main__":
+    main()
